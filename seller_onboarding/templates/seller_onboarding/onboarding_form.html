@@ -1,0 +1,140 @@
+{% extends 'seller_onboarding/base.html' %}
+
+{% block title %}Seller Onboarding Form{% endblock %}
+
+
+{% block content %}
+    <h1>Seller Onboarding Form</h1>
+    <form id="onboarding-form" method="post" action="{% url 'save_form_data' %}">
+        {% csrf_token %}
+        <input type="hidden" name="survey_id" value="{{ request.session.survey_id }}">
+        <input type="hidden" name="current_field_index" id="current-field-index" value="0">
+{% for field in form %}
+<div class="form-field form-group" {% if not forloop.first %}class="hidden"{% endif %}>
+
+    <label for="{{ field.id_for_label }}" class="font-weight-bold">{{ field.label }}</label>
+    {% if field.name == 'store_name' %}
+    <p>What is the name of your store? Example: Razer Gold, Amazon, Target. (If you have multiple stores, choose your top gift card -- you can always add more later.)</p>
+    {% elif field.name == 'gift_card_amount' %}
+    <p>Balance: What is the balance left on your gift card? If possible, please double check your balance before entering the number here. Example answer: $100, 2,000 INR, 200 EUR.</p>
+    {% elif field.name == 'price' %}
+    <p>What price are you selling at? Example Answer: $70. Please remember a low prices generally results in a faster and more successful sale, and we recommend a substantial discount. This number must be strictly at least ten percent less than the face value of the card, as we only sell discounted gift cards.</p>
+    {% elif field.name == 'crypto_network' %}
+    <p>Which network would you like to receive funds at? If you are unsure, please select Polygon. (You may change this later.)</p>
+    {% elif field.name == 'wallet_address' %}
+    <p>What Polygon or Ethereum address would you like to receive funds at? You may change this later. Example: 0xfA63Ca5caF1D88f42e1A73aE0E0cb7060B9E7292</p>
+    {% elif field.name == 'email_address' %}
+    <p>Almost done! What is your email address? We will only use this to reach out about the transaction. Please check this often as we'll use this as the main way of getting in touch.</p>
+    {% endif %}
+    {{ field }}
+</div>
+{% endfor %}
+
+<button type="button" id="next-button" class="btn btn-primary">Next</button>
+<button type="button" id="prev-button" class="btn btn-secondary" style="display: none;">Previous</button>
+<button type="submit" id="submit-button" class="btn btn-success" style="display: none;">Submit</button>
+
+    </form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentFieldIndex = 0;
+    const formFields = document.querySelectorAll('.form-field');
+    const nextButton = document.getElementById('next-button');
+    const prevButton = document.getElementById('prev-button');
+    const submitButton = document.getElementById('submit-button');
+    const onboardingForm = document.getElementById('onboarding-form');
+
+    document.addEventListener('DOMContentLoaded', () => {
+    formFields[0].classList.add('visible');
+});
+
+
+function showField(index) {
+    formFields.forEach((field, i) => {
+        if (i === index) {
+            field.classList.add('visible');
+        } else {
+            field.classList.remove('visible');
+        }
+    });
+    prevButton.style.display = index === 0 ? 'none' : 'inline';
+    nextButton.style.display = index === formFields.length - 1 ? 'none' : 'inline';
+    submitButton.style.display = index === formFields.length - 1 ? 'inline' : 'none';
+}
+
+
+
+
+
+    nextButton.addEventListener('click', () => {
+        if (currentFieldIndex < formFields.length - 1) {
+            currentFieldIndex++;
+            sessionStorage.setItem('formNavigation', 'true');
+            submitForm();
+        }
+    });
+
+    prevButton.addEventListener('click', () => {
+        if (currentFieldIndex > 0) {
+            currentFieldIndex--;
+            sessionStorage.setItem('formNavigation', 'true');
+            submitForm();
+        }
+    });
+
+    submitButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        submitForm(true);
+    });
+
+    function submitForm(submit = false) {
+        document.getElementById('current-field-index').value = currentFieldIndex;
+        const formData = new FormData(onboardingForm);
+        if (submit) {
+            formData.append('submit', '');
+        } else {
+            formData.append('next', '');
+        }
+        fetch('{% url 'save_form_data' %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                if (submit) {
+                    window.location.href = '{% url 'thank_you' %}';
+                } else {
+                    showField(currentFieldIndex);
+                }
+            } else {
+                alert('Error: ' + JSON.stringify(data.errors || data.message));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while submitting the form.');
+        });
+    }
+
+    // Detect page refresh
+    window.addEventListener('beforeunload', (event) => {
+        if (!sessionStorage.getItem('formNavigation')) {
+            // Clear survey_id from session on page refresh
+            fetch('/clear_survey_id/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                },
+            });
+        } else {
+            sessionStorage.removeItem('formNavigation');
+        }
+    });
+</script>
+{% endblock %}
