@@ -59,7 +59,7 @@ def save_form_data(request):
         else:
             return JsonResponse({"success": False, "errors": form.errors})
     else:
-        return HttpResponse(status=405)  # Method not allowed
+        return HttpResponse(status=405)
 
 
 @csrf_exempt
@@ -69,4 +69,4 @@ def clear_survey_id(request):
             del request.session['survey_id']
         return JsonResponse({"success": True})
     else:
-        return HttpResponse(status=405)  # Method not allowed
+        return HttpResponse(status=405)

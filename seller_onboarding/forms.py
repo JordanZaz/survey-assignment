@@ -28,7 +28,7 @@ class SellerOnboardingForm(forms.ModelForm):
             'email_address': forms.EmailInput(attrs={'required': False}),
         }
 
-    def __init__(self, *args, **kwargs):
-        super(SellerOnboardingForm, self).__init__(*args, **kwargs)
-        if 'submit' not in self.data:
-            self.fields['email_address'].required = False
+# NOTE: Some redundancy exists in the widget attributes below, as they are set to
+# 'required': False. These attributes are not necessary, as the form fields will
+# inherit the required status from the corresponding model fields.
+# However, this code was put together quickly for demonstration purposes.
